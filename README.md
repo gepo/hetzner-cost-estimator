@@ -26,6 +26,8 @@ It export to CSV next information about your account:
 Installation
 ------------
 
+You need python 2.7 or higher. Works on 3.5 also.
+
 Install script dependencies:
 
 ```
