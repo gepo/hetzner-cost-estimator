@@ -1,5 +1,8 @@
 Hetzner Costs Estimator
------------------------
+=======================
+
+Intro
+----
 
 If you are hosting at hetzner.de then you know that Hetzner does not provide any cost estimation tools.
 
@@ -19,6 +22,18 @@ It export to CSV next information about your account:
 1. Servers (dedicated, vserver and managed) with their prices.
 1. Paid addons for each server with their prices.
 1. Storage boxes and their prices.
+
+Installation
+------------
+
+Install script dependencies:
+
+```
+pip install requests BeautifulSoup
+```
+
+Usage
+-----
 
 You can use it as follows:
 ```
