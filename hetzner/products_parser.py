@@ -9,113 +9,71 @@ def parse():
     return res
 
 def _parseServerProducts():
-    resp = requests.get('http://hetzner.de/de')
-    soup = BeautifulSoup(resp.text, 'html.parser')
-
     map = {
         'dedicated': _parseDedicated(),
-        'vserver': _parseVserver(soup),
-        'managed': _parseManaged(soup),
-        'box': _parseBox(soup),
+        'vserver': _parseVserver(),
+        'managed': _parseManaged(),
+        'box': _parseBox(),
     }
     return map
 
 def _parseDedicated():
     url = 'https://www.hetzner.de/dedicated-rootserver/getServer'
-    data = requests.get(url).json()
+    data = _request(url).json()
 
     return { srv['name']: float(srv['price_v']) for srv in data['server'] }
 
-def _parseVserver(soup):
-    return {} # FIXME
+def _parseProductPage(url):
+    resp = _request(url)
+    soup = BeautifulSoup(resp.text, 'html.parser')
+
+    product_table = soup.find('table', class_='product-overview-card')
     map = {}
 
-    for item in soup.find_all('li', class_='tded')[1].find_all('li'):
+    product_names = list()
+    for item in product_table.find('thead').find_all('a'):
+        product_names.append(item.contents[0])
 
-        a_item = item.find('a')
-        if a_item is None:
+    index = 0
+    for item in product_table.find('tbody').find('tr').find_all('span'): 
+        if '€' != item.text[0]:
             continue
 
-        product_name = a_item.contents[0][8:].rstrip(' ')
-
-        price_elem = a_item.find('font', class_='klapp_preise')
-        if price_elem is None:
-            continue
-
-        price_elem = price_elem.find('noscript')
-        if price_elem is None:
-            continue
-
-        map[product_name] = float(price_elem.text.replace(',', '.'))
+        product_name = product_names[index]
+        index += 1
+        map[product_name] = float(item.text[2:].replace(',', '.'))
 
     return map
 
-def _parseManaged(soup):
-    return {} # FIXME
-    map = {}
+def _parseVserver():
+    return _parseProductPage('https://www.hetzner.de/virtual-server')
 
-    for item in soup.find_all('li', class_='mded')[0].find_all('li'):
+def _parseManaged():
+    return _parseProductPage('https://www.hetzner.de/managed-server')
 
-        a_item = item.find('a')
-        if a_item is None:
-            continue
-
-        product_name = a_item.contents[0]
-
-        price_elem = a_item.find('font', class_='klapp_preise')
-        if price_elem is None:
-            continue
-
-        price_elem = price_elem.find('noscript')
-        if price_elem is None:
-            continue
-
-        map[product_name] = float(price_elem.text.replace(',', '.'))
-
-    return map
-
-def _parseBox(soup):
-    return {} # FIXME
-    map = {}
-
-    for item in soup.find_all('li', class_='support')[0].find_all('ul')[0].find_all('li'):
-
-        a_item = item.find('a')
-        if a_item is None:
-            continue
-
-        product_name = a_item.contents[0].rstrip(' ')
-
-        price_elem = a_item.find('font', class_='klapp_preise')
-        if price_elem is None:
-            continue
-
-        price_elem = price_elem.find('noscript')
-        if price_elem is None:
-            continue
-
-        map[product_name] = float(price_elem.text.replace(',', '.'))
-
-    return map
+def _parseBox():
+    return _parseProductPage('https://www.hetzner.de/storage-box')
 
 def _parseFlexiPack():
-    return {} # FIXME
-    resp = requests.get('https://www.hetzner.de/de/hosting/produkte_rootserver/flexipack')
+    resp = _request('https://www.hetzner.de/flexipack')
     soup = BeautifulSoup(resp.text, 'html.parser')
 
     map = {}
     map['FlexiPack'] = float(
-        soup.find('div', class_='product-more').find('strong').find('noscript').text.replace(',', '.'))
+        soup.find('div', class_='product-order-sidebar').find('div', class_='price').text[2:].replace(',', '.'))
 
-    for row in soup.find('div', class_='table-holder').find_all('tr', class_='noborder'):
-        name = row.find('td', class_='name').text
-        price_cell = row.find('td', class_='SH-5').find('strong')
-        if price_cell is None:
+    for row in soup.find('table', class_='table-overview').find_all('tr'):
+        name = row.find('td').text
+
+        price_str = row.find_all('td')[1].text[2:]
+        try:
+            price = float(price_str.replace(',', '.'))
+        except ValueError:
             continue
-        price_cell = price_cell.find('noscript') or price_cell
-
-        price = float(price_cell.text.replace(',', '.'))
 
         map[name] = price
 
     return map
+
+def _request(url):
+    return requests.get(url, headers={'User-Agent': 'https://github.com/gepo/hetzner-cost-estimator'})
