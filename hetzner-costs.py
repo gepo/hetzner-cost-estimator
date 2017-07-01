@@ -11,7 +11,7 @@ if len(sys.argv) != 3:
     sys.exit(1)
 
 total = 0.0
-writer = csv.writer(sys.stdout, delimiter=';')
+writer = csv.writer(sys.stdout, delimiter='\t')
 writer.writerow(ItemInfo._fields)
 
 for item in estimate_costs(sys.argv[1], sys.argv[2]):
