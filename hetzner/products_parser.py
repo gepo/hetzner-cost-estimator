@@ -21,7 +21,7 @@ def _parseDedicated():
     url = 'https://www.hetzner.de/dedicated-rootserver/getServer'
     data = _request(url).json()
 
-    return { srv['name']: float(srv['price_v']) for srv in data['server'] }
+    return { srv['name']: float(srv['price_v'].replace(',', '.')) for srv in data['server'] }
 
 def _parseProductPage(url):
     resp = _request(url)
