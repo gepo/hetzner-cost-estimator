@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import requests
 from bs4 import BeautifulSoup
 
@@ -60,7 +61,7 @@ def parse():
         for row in soup.find('table', class_='table-overview').find_all('tr'):
             name = row.find('td').text
             price = to_float(row.find_all('td')[1].text[2:])
-            
+
             if price is None:
                 continue
 

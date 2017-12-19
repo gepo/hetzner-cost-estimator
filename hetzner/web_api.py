@@ -1,27 +1,28 @@
+# -*- coding: utf8 -*-
 import requests
 import math
 from bs4 import BeautifulSoup
 
 class HetznerWebAPI:
     def __init__(self):
-        # self.jar = CookieJar()
-        self.session = requests.session()
+        self.sess = requests.Session()
+        self.sess.headers.update({'User-Agent': 'https://github.com/gepo/hetzner-cost-estimator'})
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self.session.close()
+        self.sess.close()
 
     def login(self, username, password):
         # FIXME: use cookiejar persisted at file
-        self.session.get('https://robot.your-server.de/')
-        resp = self.session.post('https://accounts.hetzner.com/login_check',
+        self.sess.get('https://robot.your-server.de/')
+        resp = self.sess.post('https://accounts.hetzner.com/login_check',
                                  data={'_username': username, '_password': password})
         return 200 == resp.status_code
 
     def listServers(self):
-        resp = self.session.get('https://robot.your-server.de/server')
+        resp = self.sess.get('https://robot.your-server.de/server')
         soup = BeautifulSoup(resp.text, 'html.parser')
 
         totalServers = int(soup.find('span', class_='box_count').find('span').text)
@@ -30,7 +31,7 @@ class HetznerWebAPI:
         servers = list(self._parseServersPage(soup))
 
         for page in range(2, pages+1):
-            resp = self.session.get('https://robot.your-server.de/server/index/page/' + str(page))
+            resp = self.sess.get('https://robot.your-server.de/server/index/page/' + str(page))
             soup = BeautifulSoup(resp.text, 'html.parser')
             for server in self._parseServersPage(soup):
                 servers.append(server)
@@ -39,45 +40,43 @@ class HetznerWebAPI:
 
     def _parseServersPage(self, soup):
         for server_row in soup.find_all('table', class_='box_title'):
-            server_title = server_row.find('span', class_='tooltip_underline').text
-            spans = server_row.find('td', class_='title').find_all('span')
             # example: EX40-SSD (30 TB) #123456
-            parts = server_title.split(' ')
+            parts = server_row.find('span', class_='tooltip_underline').text.split(' ')
+            productId, productCode = parts[3][1:], parts[0]
 
-            cancelled = False
-            if len(spans) > 1:
-                img = spans[1].find('img')
-
-                if img != None:
-                    cancelled = img['src'] == '/images/cancelled.png'
+            spans = server_row.find('td', class_='title').find_all('span')
+            img = spans[1].find('img') if len(spans) > 1 else None
+            cancelled = img['src'] == '/images/cancelled.png' if img is not None else False
 
             label_elem = server_row.find('td', class_='server_name').find('span', class_='server_name_input')
             label = label_elem.text if label_elem is not None else None
 
             yield {
-                'id': parts[3][1:],
-                'product': parts[0],
+                'id': productId,
+                'product': productCode,
                 'cancelled': cancelled,
                 'label': label,
             }
 
     def listStorageBoxes(self):
-        resp = self.session.get('https://robot.your-server.de/storage')
+        resp = self.sess.get('https://robot.your-server.de/storage')
         soup = BeautifulSoup(resp.text, 'html.parser')
 
         boxes = list()
 
         for box_row in soup.find_all('table', class_='box_title'):
-            box_title = box_row.find('td', class_='title').text
-            parts = box_title.split(' ')
+            parts = box_row.find('td', class_='title').text.split(' ')
+            boxId, boxCode = parts[1][1:], parts[0]
+
             boxes.append({
-                'id': parts[1][1:],
-                'product': parts[0],
+                'id': boxId,
+                'product': boxCode,
             })
+            
         return boxes
 
     def serverAddons(self, id):
-        resp = self.session.post('https://robot.your-server.de/server/data/id/' + str(id),
+        resp = self.sess.post('https://robot.your-server.de/server/data/id/' + str(id),
                                  headers={'X-Requested-With': 'XMLHttpRequest'})
         soup = BeautifulSoup(resp.text, 'html.parser')
 

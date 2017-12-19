@@ -1,3 +1,5 @@
+# -*- coding: utf8 -*-
+
 from collections import namedtuple
 from hetzner import products_parser
 from hetzner.web_api import HetznerWebAPI
