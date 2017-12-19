@@ -46,9 +46,11 @@ ItemInfo = namedtuple('ItemInfo', 'title id product label count price total')
 def estimate_costs(username, password):
     price_guesser = ProductPriceGuesser()
     price_guesser.set_products(products_parser.parse())
-
+    
     api = HetznerWebAPI()
-    api.login(username, password)
+    if not api.login(username, password):
+        raise "Invalid login or password"
+
     boxes = api.listStorageBoxes()
     for box in boxes:
         price = price_guesser.guess_box_price(box['product'])
